@@ -16,6 +16,7 @@ public sealed class ManagementWindow : System.Windows.Window
     private string? editId;
     private long? editVersion;
     private TextBlock formTitle=Ui.Label("新增重要事项",16,true),error=Ui.Label("",12,color:Brushes.IndianRed);
+    private TextBlock? planDateLabel;
     private Button save=null!;
     public ManagementWindow(NoteWindow owner)
     {
@@ -34,7 +35,7 @@ public sealed class ManagementWindow : System.Windows.Window
     private void BuildPlan()
     {
         var root=new Grid();root.RowDefinitions.Add(new RowDefinition{Height=new GridLength(74)});root.RowDefinitions.Add(new RowDefinition{Height=new GridLength(1,GridUnitType.Star)});
-        var heading=Ui.Stack(Ui.Label("今天，把重要的事做好。",23,true),Ui.Label($"{note.Service.Today:yyyy年MM月dd日} · {Ui.Weekday(note.Service.Today)}",12,color:Ui.Muted));Ui.At(root,heading);
+        planDateLabel=Ui.Label($"{note.Service.Today:yyyy年MM月dd日} · {Ui.Weekday(note.Service.Today)}",12,color:Ui.Muted);var heading=Ui.Stack(Ui.Label("今天，把重要的事做好。",23,true),planDateLabel);Ui.At(root,heading);
         var columns=Ui.Columns(286);columns.ColumnDefinitions.Insert(1,new ColumnDefinition{Width=new GridLength(28)});planList=new StackPanel();Ui.At(columns,Ui.Scroll(planList));
         var form=new StackPanel();formTitle=Ui.Label(editId is null?"新增重要事项":"编辑事项",16,true);formTitle.Margin=new Thickness(0,0,0,17);form.Children.Add(formTitle);form.Children.Add(Ui.Field("事项名称 · 必填",title));
         var times=new Grid();times.ColumnDefinitions.Add(new ColumnDefinition());times.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(12)});times.ColumnDefinitions.Add(new ColumnDefinition());Ui.At(times,Ui.Field("预计开始 · 选填",ps));Ui.At(times,Ui.Field("预计结束 · 选填",pe),col:2);form.Children.Add(times);form.Children.Add(Ui.Field("备注 · 选填",memo));
@@ -70,6 +71,7 @@ public sealed class ManagementWindow : System.Windows.Window
     {
         if(current=="plan")
         {
+            if(planDateLabel is not null)planDateLabel.Text=$"{note.Service.Today:yyyy年MM月dd日} · {Ui.Weekday(note.Service.Today)}";
             planList.Children.Clear();var items=note.Service.ForToday();
             foreach(var t in items)
             {

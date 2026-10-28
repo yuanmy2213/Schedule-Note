@@ -22,7 +22,7 @@ public static class Program
         try
         {
             var app=new Application{ShutdownMode=ShutdownMode.OnExplicitShutdown};
-            var repo=new WorkRepository(Path.Combine(directory,"daily.db"));var service=new WorkService(repo,new SystemClock());
+            var repo=new WorkRepository(Path.Combine(directory,"daily.db"));IClock clock=smoke?new WindowsSmokeClock():new SystemClock();var service=new WorkService(repo,clock);
             Ui.ApplyTheme(repo.LoadSettings().Theme);
             var note=new NoteWindow(service,directory,smoke);app.MainWindow=note;
             app.DispatcherUnhandledException+=(_,e)=>{Log(directory,e.Exception);e.Handled=true;if(smoke){app.Shutdown(1);return;}MessageBox.Show("操作未能完成，数据仍保留。\n"+e.Exception.Message,"今日笺",MessageBoxButton.OK,MessageBoxImage.Warning);};

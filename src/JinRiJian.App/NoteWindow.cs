@@ -23,6 +23,7 @@ public sealed class NoteWindow : System.Windows.Window,IDisposable
     private StackPanel list=null!;
     private Button done=null!,pin=null!;
     private TextBlock count=null!,carry=null!;
+    private TextBlock? dateLabel,weekLabel;
     private Button undoButton=null!;
     private bool expandedDone,restoring,folded;
     private double expandedHeight;
@@ -52,7 +53,7 @@ public sealed class NoteWindow : System.Windows.Window,IDisposable
         Build();RestoreGeometry();
         geometryTimer.Tick+=(_,_)=>{geometryTimer.Stop();SaveGeometry();};
         LocationChanged+=(_,_)=>QueueGeometry();SizeChanged+=(_,_)=>QueueGeometry();
-        dayTimer.Tick+=(_,_)=>{if(Service.Today!=shownDate){Refresh();DataChanged?.Invoke(this,EventArgs.Empty);TryBackup();}};dayTimer.Start();
+        dayTimer.Tick+=(_,_)=>CheckDayChange();dayTimer.Start();
         undoTimer.Tick+=(_,_)=>{undoTimer.Stop();undoId=null;undoVersion=null;undoButton.Visibility=Visibility.Collapsed;};
         Closing+=OnClosing;Loaded+=(_,_)=>TryBackup();
     }
@@ -64,6 +65,9 @@ public sealed class NoteWindow : System.Windows.Window,IDisposable
         var root=new Grid();root.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});root.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});root.RowDefinitions.Add(new RowDefinition{Height=new GridLength(1,GridUnitType.Star)});root.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
         var header=Ui.Columns();header.Height=48;header.Margin=new Thickness(13,0,9,0);
         var brand=Mode==DisplayMode.Standard?Ui.Label("▤  今日笺",14,true):Ui.Label(Ui.DateText(Service.Today)+"  "+Ui.Weekday(Service.Today),14,true);
+        System.Windows.Automation.AutomationProperties.SetAutomationId(brand,"HeaderBrand");
+        System.Windows.Shell.WindowChrome.SetIsHitTestVisibleInChrome(brand,true);brand.ContextMenu=CreateMenu();brand.MouseLeftButtonDown+=(_,e)=>{if(e.LeftButton==MouseButtonState.Pressed){e.Handled=true;DragMove();}};
+        dateLabel=Mode==DisplayMode.Compact?brand:null;weekLabel=null;
         Ui.At(header,brand);
         var actions=new StackPanel{Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Center};
         pin=Ui.Button(Topmost?"已置顶":"置顶",()=>{Topmost=!Topmost;pin.Content=Topmost?"已置顶":"置顶";SaveGeometry();},quiet:true,automationId:"Pin");pin.FontSize=12;pin.Padding=new Thickness(6,3,6,3);pin.MinHeight=30;actions.Children.Add(pin);
@@ -82,7 +86,7 @@ public sealed class NoteWindow : System.Windows.Window,IDisposable
         if(Mode==DisplayMode.Standard)
         {
             var dates=Ui.Columns();dates.Margin=new Thickness(18,16,18,13);
-            var dateText=new StackPanel{Orientation=Orientation.Horizontal};dateText.Children.Add(Ui.Label(Ui.DateText(Service.Today),22,true));var week=Ui.Label(Ui.Weekday(Service.Today),13,color:Ui.Muted);week.Margin=new Thickness(9,0,0,0);dateText.Children.Add(week);Ui.At(dates,dateText);
+            var dateText=new StackPanel{Orientation=Orientation.Horizontal};dateLabel=Ui.Label(Ui.DateText(Service.Today),22,true);dateText.Children.Add(dateLabel);var week=Ui.Label(Ui.Weekday(Service.Today),13,color:Ui.Muted);weekLabel=week;week.Margin=new Thickness(9,0,0,0);dateText.Children.Add(week);Ui.At(dates,dateText);
             count=Ui.Label("",12,color:Ui.Muted);Ui.At(dates,count,col:1);Ui.At(root,dates,1);
         }
         else count=Ui.Label("");
@@ -106,6 +110,7 @@ public sealed class NoteWindow : System.Windows.Window,IDisposable
     public void Refresh()
     {
         shownDate=Service.Today;if(folded)return;
+        if(dateLabel is not null)dateLabel.Text=Ui.DateText(Service.Today)+(Mode==DisplayMode.Compact?"  "+Ui.Weekday(Service.Today):"");if(weekLabel is not null)weekLabel.Text=Ui.Weekday(Service.Today);
         var items=Service.ForToday();var today=items.Where(t=>t.Date==Service.Today).ToArray();count.Text=$"已完成 {today.Count(t=>t.Status==WorkStatus.Completed)} / {today.Length}";
         var old=items.Count(t=>t.Date<Service.Today);carry.Text=old>0?$"含 {old} 项延续事项，保留原归属日期":"";carry.Visibility=old>0?Visibility.Visible:Visibility.Collapsed;
         list.Children.Clear();
@@ -121,6 +126,8 @@ public sealed class NoteWindow : System.Windows.Window,IDisposable
         done.Content=$"已完成 · {completed.Length}  {(expandedDone?"⌃":"⌄")}";
         void Heading(string title,string detail=""){var grid=Ui.Columns();grid.Margin=new Thickness(0,12,0,8);Ui.At(grid,Ui.Label(title,12,color:Ui.Muted));Ui.At(grid,Ui.Label(detail,12,color:Ui.Muted),col:1);list.Children.Add(grid);}
     }
+
+    internal void CheckDayChange(){if(Service.Today!=shownDate){Refresh();DataChanged?.Invoke(this,EventArgs.Empty);TryBackup();}}
 
     private FrameworkElement TaskRow(WorkItem task)
     {

@@ -8,6 +8,12 @@ using System.Windows.Threading;
 
 namespace JinRiJian.App;
 
+internal sealed class WindowsSmokeClock : IClock
+{
+    public DateTimeOffset Now { get; set; }=DateTimeOffset.Now;
+    public TimeZoneInfo Zone => TimeZoneInfo.Local;
+}
+
 internal static class WindowsSmoke
 {
     private sealed record Result(string Name,bool Passed,string? Error=null);
@@ -46,6 +52,8 @@ internal static class WindowsSmoke
         await Check("screenshots-standard-and-compact",async()=>{var folder=Path.GetDirectoryName(Path.GetFullPath(report))!;Directory.CreateDirectory(folder);note.ChangeMode(DisplayMode.Standard);note.Width=390;note.Height=565;note.QuickInput.Clear();note.Service.Add(new WorkInput("整理沟通纪要",new TimeOnly(14,0),new TimeOnly(15,0)));note.Service.Add(new WorkInput("更新工作清单"));note.Refresh();await Settle();Capture(note,Path.Combine(folder,"standard-native.png"));note.ChangeMode(DisplayMode.Compact);note.Width=340;note.Height=360;await Settle();Capture(note,Path.Combine(folder,"compact-native.png"));note.ChangeMode(DisplayMode.Standard);});
         await Check("window-layout-260px-wide",async()=>{note.Width=260;note.Height=360;await Settle();Require(note.ActualWidth>=259&&note.QuickInput.ActualWidth>80,"Narrow window layout broken");note.Width=390;note.Height=565;});
         await Check("reopen-user-settings",()=>Sync(()=>{note.SaveGeometry();var repo=new WorkRepository(note.Service.Repository.DatabasePath);Require(repo.LoadSettings().Mode==note.Mode,"Display mode not persisted");Require(repo.LoadSettings().StandardBounds is not null&&repo.LoadSettings().CompactBounds is not null,"Both layouts not persisted");}));
+        await Check("header-settings-menu-remains-client-hit-testable",()=>Sync(()=>{var brand=Texts(note).Single(t=>AutomationProperties.GetAutomationId(t)=="HeaderBrand");Require(System.Windows.Shell.WindowChrome.GetIsHitTestVisibleInChrome(brand),"Caption swallowed the settings context menu");Require(brand.ContextMenu.Items.OfType<MenuItem>().Any(m=>m.Header?.ToString()?.Contains("窗口设置")==true),"Settings context menu missing");}));
+        await Check("midnight-refresh-updates-both-mode-dates-and-plan",async()=>{var clock=(WindowsSmokeClock)note.Service.Clock;var original=clock.Now;try{note.ChangeMode(DisplayMode.Standard);note.ShowManagement("plan");await Settle();clock.Now=original.AddDays(1);note.CheckDayChange();await Settle();Require(Texts(note).Any(t=>t.Text==Ui.DateText(note.Service.Today)),"Standard date did not advance");var manager=Application.Current.Windows.OfType<ManagementWindow>().Single();Require(Texts(manager).Any(t=>t.Text.Contains(note.Service.Today.ToString("yyyy年MM月dd日"))),"Plan date did not advance");manager.Close();clock.Now=original;note.CheckDayChange();note.ChangeMode(DisplayMode.Compact);await Settle();clock.Now=original.AddDays(1);note.CheckDayChange();await Settle();Require(Texts(note).Any(t=>t.Text==Ui.DateText(note.Service.Today)+"  "+Ui.Weekday(note.Service.Today)),"Compact date did not advance");Require(note.Service.ForToday().Any(t=>t.Id==task!.Id),"Midnight rollover lost the running task");}finally{clock.Now=original;note.CheckDayChange();note.ChangeMode(DisplayMode.Standard);}});
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(report))!);
         await File.WriteAllTextAsync(report,JsonSerializer.Serialize(new{platform=Environment.OSVersion.ToString(),framework=RuntimeInformation.FrameworkDescription,elapsedSeconds=stopwatch.Elapsed.TotalSeconds,passed=rows.Count(r=>r.Passed),failed=rows.Count(r=>!r.Passed),tests=rows},new JsonSerializerOptions{WriteIndented=true}));
         return rows.All(r=>r.Passed)?0:1;
