@@ -23,6 +23,9 @@ try {
     }
     Copy-Item docs/使用说明.txt artifacts/portable/使用说明.txt
     Copy-Item docs/使用说明.txt artifacts/framework/使用说明.txt
+    New-Item -ItemType Directory -Force artifacts/portable/licenses,artifacts/framework/licenses | Out-Null
+    Copy-Item licenses/* artifacts/portable/licenses -Recurse -Force
+    Copy-Item licenses/* artifacts/framework/licenses -Recurse -Force
     Set-Content artifacts/framework/运行要求.txt '.NET 10 Desktop Runtime x64 is required: https://dotnet.microsoft.com/download/dotnet/10.0' -Encoding utf8
     New-Item -ItemType Directory -Force artifacts/packages | Out-Null
     Compress-Archive -Path artifacts/portable/* -DestinationPath "artifacts/packages/Schedule-Note-$Version-win-x64-portable.zip" -Force

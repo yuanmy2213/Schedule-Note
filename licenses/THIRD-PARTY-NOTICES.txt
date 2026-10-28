@@ -1,0 +1,19 @@
+Third-party notices for Schedule-Note / 今日笺
+
+Microsoft .NET 10 runtime, WPF and Windows Forms
+MIT License; see DOTNET-LICENSE.txt and DOTNET-ThirdPartyNotices.txt.
+The notices shipped with the official .NET SDK distribution are included in full.
+
+Microsoft.Data.Sqlite / Microsoft.Data.Sqlite.Core 10.0.14
+Copyright (c) Microsoft Corporation. All rights reserved.
+MIT License; permission terms are reproduced in DOTNET-LICENSE.txt.
+https://github.com/dotnet/efcore
+
+SQLitePCLRaw.core / SQLitePCLRaw.provider.e_sqlite3 /
+SQLitePCLRaw.bundle_e_sqlite3 / SQLitePCLRaw.lib.e_sqlite3 2.1.13
+Copyright 2014-2024 SourceGear, LLC
+Apache License, Version 2.0; see APACHE-2.0.txt.
+https://github.com/ericsink/SQLitePCL.raw
+
+The installed NuGet package metadata identifies the copyrights and licenses
+above. Dependency versions are pinned by the project and resolved package files.

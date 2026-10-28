@@ -14,13 +14,15 @@ public static class Program
         System.Windows.Forms.Application.SetHighDpiMode(System.Windows.Forms.HighDpiMode.PerMonitorV2);
         var smoke=args.Contains("--smoke-test");
         string? Arg(string key){var i=Array.IndexOf(args,key);return i>=0&&i+1<args.Length?args[i+1]:null;}
-        var directory=Arg("--data-dir")??Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"JinRiJian");
+        var directory=Arg("--data-dir")??(smoke?Path.Combine(Path.GetTempPath(),"JinRiJian-smoke-"+Guid.NewGuid().ToString("N")):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"JinRiJian"));
         Directory.CreateDirectory(directory);
-        var identity=Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(directory))))[..20];
+        var normalizedPath=Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)).ToUpperInvariant();
+        var identity=Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalizedPath)))[..20];
         using var mutex=new Mutex(true,@"Local\JinRiJian-"+identity,out var owns);
         if(!owns){Signal(identity);return 0;}
         try
         {
+            if(smoke&&File.Exists(Path.Combine(directory,"daily.db")))throw new InvalidOperationException("原生测试只接受新的隔离数据目录，现有数据库未被修改。");
             var app=new Application{ShutdownMode=ShutdownMode.OnExplicitShutdown};
             var repo=new WorkRepository(Path.Combine(directory,"daily.db"));IClock clock=smoke?new WindowsSmokeClock():new SystemClock();var service=new WorkService(repo,clock);
             Ui.ApplyTheme(repo.LoadSettings().Theme);
