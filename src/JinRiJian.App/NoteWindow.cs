@@ -129,7 +129,7 @@ public sealed class NoteWindow : System.Windows.Window,IDisposable
         var time=task.Status==WorkStatus.Pending?task.PlannedText:task.StartedAt is { } start?FormatActual(task,start):"";
         if(task.Date<Service.Today)time=$"延续 {task.Date:MM-dd}"+(time.Length>0?" · "+time:"");
         var left=Ui.Stack(title);if(time.Length>0){var meta=Ui.Label(time,12,color:Ui.Muted);meta.Margin=new Thickness(0,3,0,0);left.Children.Add(meta);}
-        var action=completed?null:Ui.Button(running?"完成":"开始",()=>{if(running)Complete(task.Id);else Execute(()=>Service.Start(task.Id));},running,automationId:(running?"Complete-":"Start-")+task.Id);
+        var action=completed?null:Ui.Button(running?"完成":"开始",()=>{if(running)Complete(task.Id);else Execute(()=>Service.Start(task.Id));},running,quiet:Mode==DisplayMode.Compact&&!running,automationId:(running?"Complete-":"Start-")+task.Id);
         if(action is not null){action.FontSize=Mode==DisplayMode.Compact?12:14;action.MinHeight=Mode==DisplayMode.Compact?30:36;action.Padding=new Thickness(Mode==DisplayMode.Compact?8:11,5,Mode==DisplayMode.Compact?8:11,5);}
         FrameworkElement content;
         if(running&&Mode==DisplayMode.Standard)
